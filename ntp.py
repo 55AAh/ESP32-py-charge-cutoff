@@ -3,6 +3,7 @@ import logging
 import ntptime
 import asyncio
 
+from led import Led
 from utils import Utils
 
 log = logging.getLogger('NTP')
@@ -22,7 +23,7 @@ class NTP:
             try:
                 ntptime.timeout = 3
                 ntptime.host = host
-                with Utils.Blink:
+                with Led.Blink:
                     ntptime.settime()
 
             except OSError as e:

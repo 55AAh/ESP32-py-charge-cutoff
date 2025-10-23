@@ -4,6 +4,7 @@ import logging
 import asyncio
 import time
 
+from led import Led
 from utils import Utils
 from logger import Logger
 from wifi import WiFi
@@ -16,6 +17,9 @@ log.setLevel(logging.DEBUG)
 
 
 async def main():
+    with Led.BlinkBig:
+        time.sleep(0.0001)
+
     # Setup utils
     Utils.init_sd_card()
 
@@ -23,6 +27,8 @@ async def main():
     Utils.reset_uptime()
     Logger.setup_file()
     Logger.setup_web()
+
+    log.info(Utils.get_info())
 
     # Start server
     server_task = asyncio.create_task(Server.run())
@@ -43,6 +49,6 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except Exception as e:
-        Utils.blink_error()
+        Led.blink_error()
         raise e
     print('\nEXIT')

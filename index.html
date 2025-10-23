@@ -10,6 +10,7 @@
         <span>
             <button type="button" onclick="enableAutoscroll()">Enable autoscroll</button>
             <button type="button" onclick="toggleAC()">Toggle AC</button>
+            <button type="button" onclick="toggleRelay()">Toggle relay</button>
             <button type="button" onclick="shutdownServer()">Shutdown server</button>
             <button type="button" onclick="softReset()">Reset soft</button>
             <button type="button" onclick="hardReset()">Reset hard</button>
@@ -43,6 +44,10 @@
 
         async function toggleAC() {
             await tryFetch("/toggle_ac");
+        }
+
+        async function toggleRelay() {
+            await tryFetch("/toggle_relay");
         }
 
         async function shutdownServer() {

@@ -19,22 +19,22 @@ class Logger:
 
             def set(self, *args):
                 super().set(*args)
-                time_ms = Utils.get_uptime_ms()
-                self.ct = time_ms // 1000
-                self.msecs = time_ms - (time_ms // 1000) * 1000
+                epoch_time_ms = Utils.get_epoch_time_ms()
+                self.ct = epoch_time_ms // 1000
+                self.msecs = epoch_time_ms % 1000
                 # self.levelname = self.levelname[0]
 
         logging.LogRecord = LogRecord
 
         class Formatter(logging.Formatter):
             def __init__(self, *_args, **_kwargs):
-                super().__init__(fmt="%(asctime)5d.%(msecs)03d - %(levelname)s - %(name)s - %(message)s")
+                super().__init__(fmt="%(asctime)s.%(msecs)03d - %(levelname)s - %(name)s - %(message)s")
 
             def usesTime(self):
                 return True
 
-            def formatTime(self, datefmt, record):
-                return record.ct
+            def formatTime(self, _datefmt, record):
+                return Utils.format_local_time(record.ct)
 
         logging.Formatter = Formatter
 

@@ -4,6 +4,7 @@ import network
 import logging
 import requests
 
+from led import Led
 from credentials import Credentials
 from utils import Utils
 
@@ -41,7 +42,7 @@ class WiFi:
 
             # Wait until the connection is established
             while not cls._wlan.isconnected():
-                with Utils.Blink:
+                with Led.Blink:
                     print(".", end="")
                     await asyncio.sleep(0.1)
                 await asyncio.sleep(0.4)
@@ -82,7 +83,7 @@ class WiFi:
         await asyncio.sleep(0.1)
         gc.collect()
         try:
-            with Utils.Blink:
+            with Led.Blink:
                 response = requests.request(method.upper(), url, headers=headers, json=json_body, timeout=1)
         except OSError as e:
             log.error("%s", repr(e))

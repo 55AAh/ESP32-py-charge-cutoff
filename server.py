@@ -50,6 +50,16 @@ async def toggle_ac(_request):
     log.info('AC is now %d', await Logic.delta2.get_ac_enabled())
 
 
+@app.get('/toggle_relay')
+async def toggle_relay(_request):
+    gc.collect()
+    log.info('Toggle relay requested')
+    state = await Utils.relay_enabled()
+    log.info('Relay was %d, toggling to %d...', state, not state)
+    await Utils.relay_enabled(not state)
+    log.info('Relay is now %d', await Utils.relay_enabled())
+
+
 @app.get('/shutdown_server')
 async def shutdown_server(request):
     gc.collect()
