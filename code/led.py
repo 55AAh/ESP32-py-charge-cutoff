@@ -27,10 +27,3 @@ class Led:
             with cls.BlinkBig:
                 sleep(0.001)
             sleep(0.5)
-
-
-for _ in range(3):
-    with Led.Blink:
-        with Led.BlinkBig:
-            sleep(0.0001)
-    sleep(0.1)

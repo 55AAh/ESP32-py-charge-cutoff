@@ -1,7 +1,14 @@
 import asyncio
 import gc
 from machine import SPI, Pin, reset, soft_reset
-from machine import reset_cause, PWRON_RESET, HARD_RESET, WDT_RESET, DEEPSLEEP_RESET, SOFT_RESET
+from machine import (
+    reset_cause,
+    PWRON_RESET,
+    HARD_RESET,
+    WDT_RESET,
+    DEEPSLEEP_RESET,
+    SOFT_RESET,
+)
 from sdcard import SDCard
 import time
 import os
@@ -10,6 +17,7 @@ import os
 class Utils:
     wifi_retry_sleep_time = 30
     max_retries_without_disconnect = 3
+    startup_delay = 10
     charging_line_delay = 10
     ac_manual_off_delay = 10
     ac_auto_off_delay = 10
@@ -30,21 +38,24 @@ class Utils:
     def get_info(cls):
         mem_free = gc.mem_free()
         mem_total = gc.mem_alloc() + gc.mem_free()
-        memory = f'Memory = {mem_total} bytes, {mem_free / mem_total:.0%} free'
+        memory = f"Memory = {mem_total} bytes, {mem_free / mem_total:.0%} free"
 
-        reset_cause_str = 'reset cause = ' + ({
-            PWRON_RESET: 'PWRON_RESET',
-            HARD_RESET: 'HARD_RESET',
-            WDT_RESET: 'WDT_RESET',
-            DEEPSLEEP_RESET: 'DEEPSLEEP_RESET',
-            SOFT_RESET: 'SOFT_RESET',
-        }.get(reset_cause()) or 'UNKNOWN')
+        reset_cause_str = "reset cause = " + (
+            {
+                PWRON_RESET: "PWRON_RESET",
+                HARD_RESET: "HARD_RESET",
+                WDT_RESET: "WDT_RESET",
+                DEEPSLEEP_RESET: "DEEPSLEEP_RESET",
+                SOFT_RESET: "SOFT_RESET",
+            }.get(reset_cause())
+            or "UNKNOWN"
+        )
 
-        return memory + '; ' + reset_cause_str
+        return memory + "; " + reset_cause_str
 
     @classmethod
     async def reset_machine(cls, hard=False):
-        print(f'Resetting machine (hard={hard}) in 3s...')
+        print(f"Resetting machine (hard={hard}) in 3s...")
         await asyncio.sleep(3)
         if hard:
             reset()
@@ -62,8 +73,12 @@ class Utils:
     @classmethod
     def format_local_time(cls, epoch_time_s):
         local_time = epoch_time_s + 3600 * 2  # Hello DST ;)
-        year, month, mday, hour, minute, second, weekday, yearday = time.localtime(local_time)
-        time_str = f'{mday:02}.{month:02}.{year % 100:02} {hour:02}:{minute:02}:{second:02}'
+        year, month, mday, hour, minute, second, weekday, yearday = time.localtime(
+            local_time
+        )
+        time_str = (
+            f"{mday:02}.{month:02}.{year % 100:02} {hour:02}:{minute:02}:{second:02}"
+        )
         return time_str
 
     _uptime_base_ms = 0
@@ -79,7 +94,7 @@ class Utils:
     class WiFiError(Exception):
         pass
 
-    _sd_path = '/sd'
+    _sd_path = "/sd"
 
     @classmethod
     def init_sd_card(cls):

@@ -28,7 +28,9 @@ class Logger:
 
         class Formatter(logging.Formatter):
             def __init__(self, *_args, **_kwargs):
-                super().__init__(fmt="%(asctime)s.%(msecs)03d - %(levelname)s - %(name)s - %(message)s")
+                super().__init__(
+                    fmt="%(asctime)s.%(msecs)03d - %(levelname)s - %(name)s - %(message)s"
+                )
 
             def usesTime(self):
                 return True
@@ -57,8 +59,8 @@ class Logger:
         gc.collect()
 
     _file_handler = None
-    _file_dir_path = '/sd'
-    _file_path = _file_dir_path + '/esp32.log'
+    _file_dir_path = "/sd"
+    _file_path = _file_dir_path + "/esp32.log"
     _web_streams = {}
     _web_stream_new_id = 0
     _max_stream_buffer_size = 10
@@ -66,14 +68,18 @@ class Logger:
 
     @classmethod
     def setup_file(cls):
-        files = sorted([f for f in os.listdir(cls._file_dir_path) if f.startswith('esp32') and f.endswith('.log')])
+        files = sorted([
+            f
+            for f in os.listdir(cls._file_dir_path)
+            if f.startswith("esp32") and f.endswith(".log")
+        ])
         last_file_num = 0
         if files:
             try:
-                last_file_num = int(files[-1].strip('esp32_').rstrip('.log'))
+                last_file_num = int(files[-1].strip("esp32_").rstrip(".log"))
             except ValueError:
                 pass
-        cls._file_path = cls._file_dir_path + f'/esp32_{last_file_num + 1:>08}.log'
+        cls._file_path = cls._file_dir_path + f"/esp32_{last_file_num + 1:>08}.log"
 
         # Create file handler and set level to debug
         class FileHandler(logging.FileHandler):
@@ -81,7 +87,7 @@ class Logger:
                 super().emit(record)
                 self.stream.flush()
 
-        file_handler = FileHandler(cls._file_path, 'w')
+        file_handler = FileHandler(cls._file_path, "w")
         file_handler.setLevel(logging.DEBUG)
 
         # Add formatter to the handler
@@ -91,7 +97,7 @@ class Logger:
         cls._root_logger.addHandler(file_handler)
         cls._file_handler = file_handler
 
-        logging.getLogger('logger').info('Logfile = "%s"', cls._file_path)
+        logging.getLogger("logger").info('Logfile = "%s"', cls._file_path)
 
         gc.collect()
 
@@ -117,8 +123,8 @@ class Logger:
 
     @classmethod
     def _read_from_file(cls):
-        with open(cls._file_path, 'r') as f:
-            data = f.read().rstrip().split('\n')
+        with open(cls._file_path, "r") as f:
+            data = f.read().rstrip().split("\n")
             gc.collect()
             return data
 
