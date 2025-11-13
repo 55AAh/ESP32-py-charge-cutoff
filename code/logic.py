@@ -31,6 +31,15 @@ class Logic:
         log.info("Enabling charging line via relay...")
         await Utils.relay_enabled(False)
         log.info("Charging line enabled")
+        log.info("Checking device online status...")
+        while not await cls.delta2.is_online():
+            log.warning(
+                "Device is offline! Sleeping for %d secs...",
+                Utils.device_offline_delay,
+            )
+            with Led.Blink:
+                await asyncio.sleep(Utils.device_offline_delay)
+        log.info("Device is online")
 
     @classmethod
     async def ensure_charging_line_plugged(cls):

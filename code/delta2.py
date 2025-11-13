@@ -21,7 +21,7 @@ class Delta2:
             "acOutCfg",
             {
                 "enabled": int(enabled),
-                "xboost": 1,
+                "xboost": 0,
                 "out_voltage": 230,
                 "out_freq": 50,
             },

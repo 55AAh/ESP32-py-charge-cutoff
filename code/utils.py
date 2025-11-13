@@ -18,6 +18,7 @@ class Utils:
     wifi_retry_sleep_time = 30
     max_retries_without_disconnect = 3
     startup_delay = 10
+    device_offline_delay = 60
     charging_line_delay = 10
     ac_manual_off_delay = 10
     ac_auto_off_delay = 10
