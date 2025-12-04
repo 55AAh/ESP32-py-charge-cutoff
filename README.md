@@ -1,19 +1,9 @@
-# Installation
+## Requirements
 
-1. Copy "bootloader" to device:
+1. Instal [uv](https://docs.astral.sh/uv/)
 
-```shell
-uv run mpremote cp main.py :main.py
-```
+## Installation
 
-2. Copy libraries to device (answer "y"):
-
-```shell
-uv run ota.py sync lib
-```
-
-3. Copy program code to device (answer "y"):
-
-```shell
-uv run ota.py sync code
-```
+1. Create the `code/credentials.py` file
+2. `uv run ota.py sync code .` (answer `Y`)
+3. `uv run ota.py repl --reset`

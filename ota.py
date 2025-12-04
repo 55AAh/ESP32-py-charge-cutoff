@@ -121,6 +121,13 @@ class Device:
         if result.returncode != 0:
             typer.echo(f"Failed to hard reset the device:\n{result.stderr}\nAborting!")
             raise typer.Exit(code=1)
+        typer.echo("Sent hard reset command to the device")
+
+    @classmethod
+    def repl(cls, reset: bool = False):
+        if reset:
+            cls.hard_reset()
+        cls.exec_cmd(["repl"])
 
 
 app = typer.Typer(no_args_is_help=True)
@@ -327,8 +334,14 @@ def delete_cache(remote_dir: str):
 
 @app.command()
 def reset():
-    """Hard-resets the device."""
+    """Hard-resets the machine."""
     Device.hard_reset()
+
+
+@app.command()
+def repl(reset: Annotated[bool, typer.Option("--reset")] = False):
+    """Opens REPL on the device. Optionally, hard-resets the machine first."""
+    Device.repl(reset=reset)
 
 
 if __name__ == "__main__":

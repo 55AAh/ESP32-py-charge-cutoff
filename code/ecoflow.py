@@ -2,16 +2,15 @@ import hmac
 import random
 from collections import OrderedDict
 
-from wifi import WiFi
-from ntp import NTP
-from utils import Utils
+import aiohttp
 
-JsonParamsDict = dict
-JsonParamsArray = list
-QueryParamsDict = dict
+from clock import Clock
+from credentials import Credentials
 
 
 class EcoflowApi:
+    _session = aiohttp.ClientSession("https://api.ecoflow.com/iot-open/sign/device")
+
     class EcoflowApiException(Exception):
         pass
 
@@ -20,7 +19,7 @@ class EcoflowApi:
         self._secret_key = secret_key
 
     @staticmethod
-    def _flatten_json_body(json_value, into_dict: QueryParamsDict, full_key=""):
+    def _flatten_json_body(json_value, into_dict: dict, full_key=""):
         # Top level object must be dict
         assert full_key is not None or isinstance(json_value, dict)
 
@@ -47,8 +46,8 @@ class EcoflowApi:
         self,
         nonce: int,
         timestamp: int,
-        json_body: JsonParamsDict,
-        query_params: QueryParamsDict = None,
+        json_body=None,
+        query_params=None,
     ) -> str:
         # Collect all params from json body
         all_params: dict[str, str] = dict()
@@ -88,19 +87,16 @@ class EcoflowApi:
         self,
         method: str,
         api_func: str,
-        json_body: JsonParamsDict = None,
-        query_params: QueryParamsDict = None,
-    ) -> dict[str]:
-        await NTP.ensure_synced()
-
-        url = f"https://api.ecoflow.com/iot-open/sign/device/{api_func}"
-        # url = 'https://httpbin.org/get'
+        json_body=None,
+        query_params=None,
+    ) -> dict:
+        url = f"/{api_func}"
 
         if query_params:
             url += "?" + "&".join([f"{k}={str(v)}" for k, v in query_params.items()])
 
         nonce = random.randint(100000, 999999)
-        timestamp = Utils.get_unix_time_ms()
+        timestamp = Clock.get_unix_time_ms()
 
         query_str = self._stringify_query(nonce, timestamp, json_body, query_params)
         sign = self._sign_query(query_str)
@@ -112,15 +108,17 @@ class EcoflowApi:
             "sign": sign,
         }
 
-        response = await WiFi.request(method, url, headers, json_body)
+        async with self._session.request(
+            method.upper(), url, headers=headers, json=json_body
+        ) as response:
+            result_json: dict = await response.json()
 
-        result_json: dict[str] = response.json()
         if result_json.get("code") == "1000":
             raise self.DeviceOffline
         assert result_json.get("code") == "0", result_json
         assert result_json.get("message") == "Success", result_json
         data = result_json.get("data", None)
-        return data
+        return data or {}
 
     async def get_devices_list(self):
         devices = await self._make_request("get", "list")
@@ -143,13 +141,13 @@ class EcoflowDeviceApi(EcoflowApi):
                 return online
         raise self.DeviceNotLinked
 
-    async def get_all_params(self) -> dict[str]:
+    async def get_all_params(self) -> dict:
         data = await self._make_request(
             "get", "quota/all", query_params={"sn": self._sn}
         )
         return data
 
-    async def get_params(self, param_names: list[str]):
+    async def get_params(self, param_names: list):
         json_body = {
             "sn": self._sn,
             "params": {
@@ -166,9 +164,7 @@ class EcoflowDeviceApi(EcoflowApi):
         BMS_SLAVE = 4
         MPPT = 5
 
-    async def set_params(
-        self, module_type: int, operate_type: str, params: JsonParamsDict
-    ):
+    async def set_params(self, module_type: int, operate_type: str, params: dict):
         json_body = {
             "sn": self._sn,
             "moduleType": module_type,
@@ -176,3 +172,56 @@ class EcoflowDeviceApi(EcoflowApi):
             "params": params,
         }
         await self._make_request("put", "quota", json_body)
+
+
+class Delta2:
+    def __init__(self, api: EcoflowDeviceApi):
+        self._api = api
+
+    async def is_online(self) -> bool:
+        online = await self._api.is_online()
+        return online
+
+    async def get_ac_enabled(self) -> bool:
+        param = "mppt.cfgAcEnabled"
+        data = await self._api.get_params([param])
+        value = data[param]
+        return value == 1
+
+    async def set_ac_enabled(self, enabled: bool):
+        await self._api.set_params(
+            self._api.ModuleType.MPPT,
+            "acOutCfg",
+            {
+                "enabled": int(enabled),
+                "xboost": 0,
+                "out_voltage": 230,
+                "out_freq": 50,
+            },
+        )
+
+    async def charging_line_plugged(self) -> bool:
+        param = "bms_emsStatus.chgLinePlug"
+        data = await self._api.get_params([param])
+        value = data[param]
+        return value == 1
+
+    async def is_charging(self) -> bool:
+        param = "bms_bmsStatus.chgState"
+        data = await self._api.get_params([param])
+        value = data[param]
+        return value != 0
+
+    async def remaining_time_minutes(self) -> int:
+        param = "pd.remainTime"
+        data = await self._api.get_params([param])
+        value = data[param]
+        return value
+
+
+device_api = EcoflowDeviceApi(
+    access_key=Credentials.ecoflow_access_key,
+    secret_key=Credentials.ecoflow_secret_key,
+    sn=Credentials.ecoflow_sn,
+)
+delta2 = Delta2(device_api)
