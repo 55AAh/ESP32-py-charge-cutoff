@@ -215,8 +215,28 @@ class Delta2:
     async def remaining_time_minutes(self) -> int:
         param = "pd.remainTime"
         data = await self._api.get_params([param])
-        value = data[param]
+        value = int(data[param])
         return value
+
+    async def soc(self) -> int:
+        param = "pd.soc"
+        data = await self._api.get_params([param])
+        value = int(data[param])
+        return value
+
+    async def battery_status(self) -> dict:
+        params = [
+            "bms_bmsStatus.chgState",
+            "pd.remainTime",
+            "pd.soc",
+        ]
+        data = await self._api.get_params(params)
+        values = {
+            "is_charging": data["bms_bmsStatus.chgState"] != 0,
+            "remaining_time_minutes": int(data["pd.remainTime"]),
+            "soc": int(data["pd.soc"]),
+        }
+        return values
 
 
 device_api = EcoflowDeviceApi(

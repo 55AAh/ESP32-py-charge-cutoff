@@ -1,6 +1,5 @@
 import asyncio
 import machine
-import time
 
 import aiohttp
 
@@ -14,8 +13,6 @@ log = getLogger("BOT")
 
 class TelegramBot:
     long_polling_timeout_s = 60  # long polling timeout
-    awake_time_s = 600
-    sleep_time_s = 60
 
     should_stop = False
 
@@ -41,29 +38,19 @@ class TelegramBot:
 
     @classmethod
     async def listen(cls):
-        last_update_at = time.time()
-
         log("Listening for updates!")
 
         while True:
             updates = await cls.get_updates()
 
             for update in updates:
-                last_update_at = time.time()
                 cls._offset = update["update_id"] + 1
 
                 await cls.handle_update(update)
                 if cls.should_stop:
                     return
 
-            if time.time() - last_update_at < cls.awake_time_s:
-                await asyncio.sleep(1)
-            else:
-                log(
-                    f"No updates for {cls.awake_time_s}s, "
-                    f"will sleep for {cls.sleep_time_s}s."
-                )
-                await asyncio.sleep(cls.sleep_time_s)
+            await asyncio.sleep(1)
 
     @classmethod
     async def send_text(cls, text, reply_markup=None):
@@ -128,49 +115,30 @@ class TelegramBot:
         elif text == "Status":
             log(f"Received {text} command")
 
-            status_list = [
-                "Relay charging: ",
-                "Device online: ",
-                "AC enabled: ",
-                "Charging line plugged: ",
-                "Battery charging: ",
-                "Estimated remaining time: ",
-            ]
-
             is_charging_enabled = Relay.is_charging_enabled()
-            print(
+            log(
                 f"Relay charging is {'enabled ✅️' if is_charging_enabled else 'disabled ❌'}"
             )
-            status_list[0] += "✅️" if is_charging_enabled else "❌"
-            msg1 = await cls.send_text("\n".join(status_list))
-            msg1_id = msg1["message_id"]
 
             is_online = await delta2.is_online()
-            print(f"Device is {'online ✅️' if is_online else 'offline ❌'}")
-            status_list[1] += "✅️" if is_online else "❌"
-            await cls.edit_message(msg1_id, "\n".join(status_list))
+            log(f"Device is {'online ✅️' if is_online else 'offline ❌'}")
 
-            is_ac_enabled = await delta2.get_ac_enabled()
-            print(f"AC is {'enabled ✅️' if is_ac_enabled else 'disabled ❌'}")
-            status_list[2] += "✅️" if is_ac_enabled else "❌"
-            await cls.edit_message(msg1_id, "\n".join(status_list))
-
-            is_charging_line_plugged = await delta2.charging_line_plugged()
-            print(
-                f"Charging line is {'plugged ✅️' if is_charging_line_plugged else 'unplugged ❌'}"
+            params = await delta2._api.get_params([
+                "mppt.cfgAcEnabled",
+                "bms_emsStatus.chgLinePlug",
+                "bms_bmsStatus.chgState",
+                "pd.remainTime",
+                "bms_bmsStatus.soc",
+            ])
+            text = (
+                f"Device status:\n"
+                f"AC: {'✅️' if params['mppt.cfgAcEnabled'] == 1 else '❌'}\n"
+                f"Charging line: {'✅️' if params['bms_emsStatus.chgLinePlug'] == 1 else '❌'}\n"
+                f"Charging: {'✅️' if params['bms_bmsStatus.chgState'] != 0 else '❌'}\n"
+                f"Remaining time: {params['pd.remainTime']} minutes\n"
+                f"SOC: {params['bms_bmsStatus.soc']}%"
             )
-            status_list[3] += "✅️" if is_charging_line_plugged else "❌"
-            await cls.edit_message(msg1_id, "\n".join(status_list))
-
-            is_charging = await delta2.is_charging()
-            print(f"Battery is {'charging ✅️' if is_charging else 'not charging ❌'}")
-            status_list[4] += "✅️" if is_charging else "❌"
-            await cls.edit_message(msg1_id, "\n".join(status_list))
-
-            remaining_time_minutes = await delta2.remaining_time_minutes()
-            print(f"Estimated remaining time: {remaining_time_minutes}m ⏳")
-            status_list[5] += f"{remaining_time_minutes}m ⏳"
-            await cls.edit_message(msg1_id, "\n".join(status_list))
+            log(text)
 
         elif text == "Toggle relay":
             log(f"Received {text} command")

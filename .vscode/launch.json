@@ -6,7 +6,7 @@
     "configurations": [
         {
             "name": "Sync & reset & repl",
-            "program": "ota.py",
+            "program": "otw.py",
             "console": "integratedTerminal",
             "args": ["repl", "--reset"],
             "request": "launch",

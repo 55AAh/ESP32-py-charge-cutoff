@@ -19,15 +19,17 @@ def main():
     # Begin connecting to WiFi early to save time
     from wifi import WiFi
 
-    WiFi.begin_connecting()
+    WiFi.begin()
+
+    # Import our application and all its dependencies
+    import app
+
+    # Wait until WiFi is connected
+    WiFi.connect()
 
     # We are ready to run the main application
-    import asyncio
-
-    from app import app, catch_error
-
-    log("Starting event loop")
-    asyncio.run(catch_error(app()))
+    print("WiFi connected, starting event loop")
+    app.main()
     log("Event loop exited. Passing execution to REPL.")
 
 

@@ -32,14 +32,26 @@ class Clock:
         """Returns current UNIX time in milliseconds. Automatically synchronizes RTC via NTP if needed."""
         uptime_s = time.time()
 
-        if (
-            cls.last_renewed_at == 0
-            or (uptime_s - cls.last_renewed_at) >= cls.renew_time_secs
-        ):
-            # If the last sync was more than renew_time_secs ago, sync again
-            Ntp.rtc_sync()
-            cls.last_renewed_at = time.time()
-            print("Synced RTC via NTP")
+        try:
+            if (
+                cls.last_renewed_at == 0
+                or (uptime_s - cls.last_renewed_at) >= cls.renew_time_secs
+            ):
+                print("Syncing RTC via NTP...")
+                # If the last sync was more than renew_time_secs ago, sync again
+                Ntp.rtc_sync()
+                cls.last_renewed_at = time.time()
 
-        # Format the time to UNIX epoch
+                localtime = cls._get_unix_time_ms_no_sync()
+                print(f"Synced RTC, current UNIX time is {localtime}")
+
+            # Format the time to UNIX epoch
+            return cls._get_unix_time_ms_no_sync()
+
+        except RuntimeError as e:
+            raise OSError(f"Unable to obtain system time: {e}")
+
+    @classmethod
+    def _get_unix_time_ms_no_sync(cls) -> int:
+        """Returns current UNIX time in milliseconds without syncing RTC via NTP."""
         return Ntp.time_ms(Ntp.EPOCH_1970)

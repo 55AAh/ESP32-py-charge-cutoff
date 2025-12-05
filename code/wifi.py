@@ -23,20 +23,19 @@ class WiFi:
     _wlan = network.WLAN(network.STA_IF)
 
     @classmethod
-    def begin_connecting(cls):
-        """Begins connection to WiFi network. Non-blocking."""
-        print("Enabling WiFi interface...")
-        cls._wlan.active(True)
-
+    def begin(cls):
+        """Begins WiFi connection process (non-blocking)."""
         print("Initializing WiFi connection...")
+        cls._wlan.active(True)
         cls._wlan.ifconfig(cls.static_ifconfig)
         cls._wlan.connect(Credentials.network_ssid, Credentials.network_pass)
 
     @classmethod
-    def ensure_connected(cls):
-        """Blocks execution until connected."""
+    def connect(cls):
+        """Starts connection and blocks execution until connected (unless block=False)."""
 
         while not cls._wlan.isconnected():
+            RedLed.turn_off()
             try:
                 started_at = time.time()
                 print("Waiting for WiFi connection: ", end="")
@@ -54,33 +53,73 @@ class WiFi:
 
             except OSError as e:
                 print(f"WiFi connection error: {e}!")
-                if cls._wlan:
-                    cls._wlan.disconnect()
-                cls._wlan.active(False)
+
                 # Hopefully, disabling and re-enabling the interface helps
-                time.sleep(1)
+                try:
+                    cls.disable()
+                    time.sleep(1)
+                    cls.begin()
+                except OSError as _e:
+                    print(f"WiFi reset error: {_e}!")
+                    time.sleep(10)
 
         # Connection successful
-        print(f"ifconfig(): {cls._wlan.ifconfig()}")
         RedLed.turn_on()
+
+    @classmethod
+    def disable(cls):
+        """Disables WiFi interface."""
+
+        print("Disabling WiFi interface...")
+
+        if cls._wlan and cls._wlan.active():
+            cls._wlan.disconnect()
+        cls._wlan.active(False)
+
+        print("WiFi interface disabled")
+        RedLed.turn_off()
+
+    @classmethod
+    def ensure_wifi_sync(cls, task):
+        while True:
+            try:
+                cls.connect()
+                task()
+
+            except OSError as e:
+                print(f"WiFi operation error: {e}")
+
+                # Hopefully, disabling and re-enabling the interface helps
+                try:
+                    cls.disable()
+                    time.sleep(10)
+                    cls.begin()
+                except OSError as _e:
+                    print(f"WiFi reset error: {_e}!")
+                    time.sleep(10)
+
+            else:
+                break
 
     @classmethod
     async def ensure_wifi(cls, task_gen):
         while True:
             try:
+                cls.connect()
                 task = task_gen()
                 await task
+
             except OSError as e:
                 print(f"WiFi operation error: {e}, disconnecting...")
-                if cls._wlan:
-                    cls._wlan.disconnect()
-                cls._wlan.active(False)
-                time.sleep(1)
 
-                cls.begin_connecting()
-                cls.ensure_connected()
-                time.sleep(1)
+                # Hopefully, disabling and re-enabling the interface helps
+                try:
+                    cls.disable()
+                    time.sleep(10)
+                    cls.begin()
+                except OSError as _e:
+                    print(f"WiFi reset error: {_e}!")
+                    time.sleep(10)
 
-                print("Will retry the task now")
             else:
                 break

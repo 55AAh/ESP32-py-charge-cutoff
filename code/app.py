@@ -15,8 +15,8 @@ import uftpd
 # External library that implements asynchronous requests client for MicroPython
 import aiohttp
 
-
 import asyncio
+import gc
 
 from logger import log_error
 from periphery import RedLed
@@ -30,16 +30,11 @@ async def app():
     # Lets's turn on an LED to indicate that we are alive
     RedLed.turn_on()
 
-    import gc
-
     # Enable automatic garbage collection
     gc.enable()
 
-    # Wait until WiFi is connected
-    WiFi.ensure_connected()
-
     # Setup clock and synchronize RTC via NTP
-    Clock.setup()
+    WiFi.ensure_wifi_sync(Clock.setup)
 
     # Start Telegram bot
     bot_task = asyncio.create_task(catch_error(WiFi.ensure_wifi(TelegramBot.listen)))
@@ -57,3 +52,7 @@ async def catch_error(awaitable):
         await awaitable
     except Exception as e:
         log_error(e)
+
+
+def main():
+    asyncio.run(catch_error(app()))
