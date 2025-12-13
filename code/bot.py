@@ -4,8 +4,8 @@ import machine
 import aiohttp
 
 from credentials import Credentials
-from periphery import Relay
 from ecoflow import delta2
+from tuya import tuya_switch
 from logger import getLogger
 
 log = getLogger("BOT")
@@ -38,7 +38,7 @@ class TelegramBot:
 
     @classmethod
     async def listen(cls):
-        log("Listening for updates!")
+        log("POWERON")
 
         while True:
             updates = await cls.get_updates()
@@ -103,7 +103,7 @@ class TelegramBot:
                     "keyboard": [
                         [{"text": "Status"}],
                         [{"text": "Toggle AC"}],
-                        [{"text": "Toggle relay"}],
+                        [{"text": "Relay OFF"}],
                         [{"text": "Reset soft"}],
                         [{"text": "Reset hard"}],
                         [{"text": "Stop bot"}],
@@ -114,11 +114,6 @@ class TelegramBot:
 
         elif text == "Status":
             log(f"Received {text} command")
-
-            is_charging_enabled = Relay.is_charging_enabled()
-            log(
-                f"Relay charging is {'enabled ✅️' if is_charging_enabled else 'disabled ❌'}"
-            )
 
             is_online = await delta2.is_online()
             log(f"Device is {'online ✅️' if is_online else 'offline ❌'}")
@@ -140,15 +135,10 @@ class TelegramBot:
             )
             log(text)
 
-        elif text == "Toggle relay":
+        elif text == "Relay OFF":
             log(f"Received {text} command")
-            is_charging_enabled = Relay.is_charging_enabled()
-            if is_charging_enabled:
-                Relay.disable_charging()
-                log("Disabled relay charging ❌")
-            else:
-                Relay.enable_charging()
-                log("Enabled relay charging ✅️")
+            log("Turning the relay off... Goodbye!)")
+            await tuya_switch.set_switch(False)
 
         elif text == "Toggle AC":
             log(f"Received {text} command")

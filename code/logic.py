@@ -1,6 +1,6 @@
 import asyncio
-from periphery import Relay
 from ecoflow import delta2
+from tuya import tuya_switch
 from logger import getLogger
 
 
@@ -10,7 +10,7 @@ log = getLogger("LOGIC")
 class Logic:
     startup_delay = 10
     device_offline_delay = 60
-    start_charging_delay = 10
+    start_charging_delay = 60
     ac_manual_off_delay = 10
     ac_auto_off_delay = 10
     charge_check_max_delay = 300
@@ -22,17 +22,13 @@ class Logic:
         log(f"Sleeping for {cls.startup_delay}s before executing logic...")
         await asyncio.sleep(cls.startup_delay)
 
-        Relay.enable_charging()
-        log("Enabled relay charging")
-
         await cls.ensure_online()
         await cls.ensure_charging()
         await cls.ensure_ac_off()
         await cls.ensure_battery_full()
 
-        log("Disabling relay charging...")
-        Relay.disable_charging()
-        log("Relay charging disabled, logic done!")
+        log("Turning the relay off... Goodbye!)")
+        await tuya_switch.set_switch(False)
 
     @classmethod
     async def ensure_online(cls):
