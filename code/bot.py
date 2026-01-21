@@ -1,4 +1,5 @@
 import asyncio
+import time
 import machine
 
 import aiohttp
@@ -53,9 +54,61 @@ class TelegramBot:
             await asyncio.sleep(1)
 
     @classmethod
-    async def send_text(cls, text, reply_markup=None):
+    async def send_info(cls):
+        def format_time(seconds):
+            # Get the current time as an 8-tuple:
+            # (year, month, mday, hour, minute, second, weekday, yearday)
+            now = time.gmtime(seconds + 3600 * 2)  # UTC+2
+
+            # Format as "DD.MM.YYYY HH:MM"
+            time_string = "{:02d}.{:02d}.{:04d} {:02d}:{:02d}".format(
+                now[2], now[1], now[0], now[3], now[4]
+            )
+            return time_string
+
+        def format_interval(seconds):
+            days = seconds // (3600 * 24)
+            hours = (seconds % (3600 * 24)) // 3600
+            minutes = (seconds % 3600) // 60
+            if days > 0:
+                return f"{days} дн. {hours} год. {minutes} хв."
+            elif hours > 0:
+                return f"{hours} год. {minutes} хв."
+            else:
+                return f"{minutes} хв."
+
+        def format_info(
+            start_time: float, start_soc: int, now_time: float, now_soc: int
+        ):
+            info = f"Дали світло:\n{format_time(start_time)} (заряд {start_soc}%)"
+            info += f"\nБуло до:\n{format_time(now_time)} (заряд {now_soc}%)"
+            info += f"\n({format_interval(now_time - start_time)})"
+            return info
+
+        start_soc = await delta2.soc()
+        start_time = time.time()
+
+        current_info = format_info(start_time, start_soc, start_time, start_soc)
+        info_message = await cls.send_text(Credentials.tg_info_chat_id, current_info)
+        info_message_id = info_message["message_id"]
+
+        while True:
+            await asyncio.sleep(60)  # every minute
+
+            now_soc = await delta2.soc()
+            now_time = time.time()
+            new_info = format_info(start_time, start_soc, now_time, now_soc)
+
+            if new_info != current_info:
+                await cls.edit_message(
+                    Credentials.tg_info_chat_id, info_message_id, new_info
+                )
+                current_info = new_info
+
+    @classmethod
+    async def send_text(cls, chat_id, text, reply_markup=None):
         body = {
-            "chat_id": Credentials.tg_chat_id,
+            "chat_id": chat_id,
             "text": text,
         }
 
@@ -72,9 +125,9 @@ class TelegramBot:
             return jo.get("result")
 
     @classmethod
-    async def edit_message(cls, message_id: int, new_text: str):
+    async def edit_message(cls, chat_id, message_id: int, new_text: str):
         body = {
-            "chat_id": Credentials.tg_chat_id,
+            "chat_id": chat_id,
             "message_id": message_id,
             "text": new_text,
         }
@@ -90,7 +143,11 @@ class TelegramBot:
     async def handle_update(cls, update):
         message = update.get("message", {})
         chat_id = message.get("chat", {}).get("id")
-        if str(chat_id) != str(Credentials.tg_chat_id):
+
+        if str(chat_id) != str(Credentials.tg_admin_chat_id):
+            if str(chat_id) == str(Credentials.tg_info_chat_id):
+                return  # Ignore messages from info chat
+
             log(f"Ignored message from chat_id = '{chat_id}'")
             return
 
@@ -98,6 +155,7 @@ class TelegramBot:
         if text == "/start":
             log(f"Received {text} command")
             await cls.send_text(
+                Credentials.tg_admin_chat_id,
                 "Sending you the keyboard.",
                 reply_markup={
                     "keyboard": [

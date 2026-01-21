@@ -46,7 +46,11 @@ def _log(text: str):
     print(text)
 
     # Then, try to send to Telegram
-    body = {"chat_id": Credentials.tg_chat_id, "text": text, "parse_mode": "markdown"}
+    body = {
+        "chat_id": Credentials.tg_admin_chat_id,
+        "text": text,
+        "parse_mode": "markdown",
+    }
 
     try:
         response = urequests.get(

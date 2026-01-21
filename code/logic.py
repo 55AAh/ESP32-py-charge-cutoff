@@ -27,8 +27,9 @@ class Logic:
         await cls.ensure_ac_off()
         await cls.ensure_battery_full()
 
-        log("Turning the relay off... Goodbye!)")
-        await tuya_switch.set_switch(False)
+        log("All done! You can turn the relay off now.")
+        # log("Turning the relay off... Goodbye!)")
+        # await tuya_switch.set_switch(False)
 
     @classmethod
     async def ensure_online(cls):

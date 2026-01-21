@@ -36,14 +36,22 @@ async def app():
     # Setup clock and synchronize RTC via NTP
     WiFi.ensure_wifi_sync(Clock.setup)
 
-    # Start Telegram bot
-    bot_task = asyncio.create_task(catch_error(WiFi.ensure_wifi(TelegramBot.listen)))
+    # Start Telegram bot admin listener
+    bot_admin_task = asyncio.create_task(
+        catch_error(WiFi.ensure_wifi(TelegramBot.listen))
+    )
+
+    # Start Telegram bot into sender
+    bot_info_task = asyncio.create_task(
+        catch_error(WiFi.ensure_wifi(TelegramBot.send_info))
+    )
 
     # Start cutoff logic
     cutoff_task = asyncio.create_task(catch_error(WiFi.ensure_wifi(Logic.run)))
 
     # Await tasks
-    await bot_task
+    await bot_admin_task
+    await bot_info_task
     await cutoff_task
 
 
